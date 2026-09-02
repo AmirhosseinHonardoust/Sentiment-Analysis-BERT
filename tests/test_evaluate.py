@@ -45,8 +45,7 @@ def _tiny_csv(path: Path, n_per_class: int = 4):
 
 
 def test_lstm_train_then_evaluate_end_to_end(tmp_path: Path):
-    """Exercises the new LSTM evaluation path this PR adds: previously
-    train_lstm.py had no corresponding evaluator at all."""
+    """Exercises the LSTM train -> evaluate -> predict pipeline end-to-end."""
     src_dir = Path(__file__).resolve().parent.parent / "src"
     train_csv = tmp_path / "train.csv"
     val_csv = tmp_path / "val.csv"
@@ -98,3 +97,22 @@ def test_lstm_train_then_evaluate_end_to_end(tmp_path: Path):
 
     metrics = json.loads((outdir / "metrics.json").read_text())
     assert "macro_roc_auc" in metrics
+
+    predict_result = subprocess.run(
+        [
+            sys.executable,
+            str(src_dir / "predict.py"),
+            "--checkpoint",
+            str(outdir),
+            "--text",
+            "good great awesome",
+            "--text",
+            "bad terrible awful",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert predict_result.returncode == 0, predict_result.stderr
+    lines = [line for line in predict_result.stdout.splitlines() if line.strip()]
+    assert len(lines) == 2
+    assert all(line.startswith("[") for line in lines)

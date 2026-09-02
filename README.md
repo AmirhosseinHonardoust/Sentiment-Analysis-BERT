@@ -40,7 +40,9 @@ sentiment-analysis-bert/
 │  ├─ preprocess.py
 │  ├─ train_lstm.py
 │  ├─ train_bert.py
+│  ├─ bert_dataset.py     # shared tokenized dataset for train_bert.py / evaluate.py
 │  ├─ evaluate.py
+│  ├─ predict.py          # single-text inference, either model
 │  └─ utils.py
 ├─ tests/
 ├─ pyproject.toml
@@ -88,6 +90,12 @@ python src/evaluate.py --test data/test.csv --checkpoint outputs/bert --outdir o
 python src/evaluate.py --test data/test.csv --checkpoint outputs/lstm --outdir outputs/lstm --wordclouds
 ```
 
+## Predict
+Classify one or more texts directly, without a labeled CSV. Same checkpoint auto-detection as `evaluate.py`.
+```bash
+python src/predict.py --checkpoint outputs/lstm --text "I love this!" --text "Broke after a week."
+```
+
 ## Development
 ```bash
 ruff check --select E,F,I,B,SIM,UP --line-length 100 src/ tests/
@@ -126,8 +134,14 @@ These four commands are exactly what CI runs on every push/PR. The pytest suite 
 
 ---
 
+## Known limitations
+- `data/tweets_sample.csv` is a 15-row illustrative sample; don't read anything into the demo metrics/plots in `outputs/` beyond "the pipeline runs end-to-end."
+- Pinned dependency versions (`requirements.txt`) are from mid-2024; a version bump (torch, transformers) hasn't been done yet since it needs re-verifying the BERT path against a real Hugging Face Hub download, which isn't exercised in CI.
+- BERT training/eval requires downloading `bert-base-uncased` from the Hugging Face Hub and is not covered by CI or automated tests — only exercised manually.
+
 ## Next Steps
 - Expand dataset for more robust evaluation.  
 - Try advanced transformer models (RoBERTa, DistilBERT).  
 - Apply hyperparameter tuning and cross-validation.  
 - Deploy model with FastAPI or Streamlit for interactive demo.  
+- Bump pinned dependencies (torch, transformers) and re-verify the BERT path.

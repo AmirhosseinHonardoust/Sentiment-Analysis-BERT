@@ -1,11 +1,20 @@
+"""Fine-tune a Hugging Face sequence-classification model on tweet sentiment.
+
+Writes an HF-format checkpoint directory (config.json, model weights,
+tokenizer files) to --outdir, plus a small `best_model_bert.pt` pointer file
+recording which base model was used. Requires network access to download the
+base model from the Hugging Face Hub on first run.
+"""
+
 import argparse
 import os
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
 import torch
 from torch.optim import AdamW
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import (
     AutoModelForSequenceClassification,
@@ -13,43 +22,30 @@ from transformers import (
     get_linear_schedule_with_warmup,
 )
 
+from bert_dataset import BertTweetDataset
 from utils import ID2LABEL, LABEL2ID, plot_training_curves
 
 
-class TweetDS(Dataset):
-    def __init__(self, df, tokenizer, max_len=128):
-        self.texts = df["text"].astype(str).tolist()
-        self.labels = [LABEL2ID[label] for label in df["label"].tolist()]
-        self.tok = tokenizer
-        self.max_len = max_len
-
-    def __len__(self):
-        return len(self.texts)
-
-    def __getitem__(self, i):
-        enc = self.tok(
-            self.texts[i],
-            truncation=True,
-            padding="max_length",
-            max_length=self.max_len,
-            return_tensors="pt",
-        )
-        item = {k: v.squeeze(0) for k, v in enc.items()}
-        item["labels"] = torch.tensor(self.labels[i], dtype=torch.long)
-        return item
-
-
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--train", required=True)
-    ap.add_argument("--val", required=True)
-    ap.add_argument("--outdir", default="outputs")
-    ap.add_argument("--epochs", type=int, default=3)
-    ap.add_argument("--batch-size", type=int, default=16)
-    ap.add_argument("--lr", type=float, default=2e-5)
-    ap.add_argument("--model", type=str, default="bert-base-uncased")
-    ap.add_argument("--max-len", type=int, default=128)
-    ap.add_argument("--seed", type=int, default=42)
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--train", required=True, help="Path to training CSV (text,label columns).")
+    ap.add_argument("--val", required=True, help="Path to validation CSV (text,label columns).")
+    ap.add_argument(
+        "--outdir", default="outputs", help="Directory to write the HF checkpoint and curves to."
+    )
+    ap.add_argument("--epochs", type=int, default=3, help="Number of training epochs.")
+    ap.add_argument("--batch-size", type=int, default=16, help="Training/validation batch size.")
+    ap.add_argument("--lr", type=float, default=2e-5, help="AdamW learning rate.")
+    ap.add_argument(
+        "--model",
+        type=str,
+        default="bert-base-uncased",
+        help="Hugging Face Hub model id to fine-tune.",
+    )
+    ap.add_argument(
+        "--max-len", type=int, default=128, help="Max token sequence length (truncate/pad to)."
+    )
+    ap.add_argument("--seed", type=int, default=42, help="Random seed for torch/numpy.")
     args = ap.parse_args()
 
     os.makedirs(args.outdir, exist_ok=True)
@@ -65,8 +61,8 @@ def main():
     # Data
     tr = pd.read_csv(args.train)
     va = pd.read_csv(args.val)
-    trds = TweetDS(tr, tok, args.max_len)
-    vads = TweetDS(va, tok, args.max_len)
+    trds = BertTweetDataset(tr, tok, args.max_len)
+    vads = BertTweetDataset(va, tok, args.max_len)
     train_loader = DataLoader(trds, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(vads, batch_size=args.batch_size, shuffle=False)
 
@@ -77,7 +73,7 @@ def main():
     total_steps = len(train_loader) * args.epochs
     sched = get_linear_schedule_with_warmup(opt, num_warmup_steps=0, num_training_steps=total_steps)
 
-    history = {"train_loss": [], "val_loss": []}
+    history: Dict[str, List[float]] = {"train_loss": [], "val_loss": []}
     best = float("inf")
     # Namespaced so it never collides with train_lstm.py's checkpoint in the
     # same --outdir (both used to write "best_model.pt").

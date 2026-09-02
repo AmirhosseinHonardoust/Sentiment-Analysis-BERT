@@ -2,8 +2,37 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 
-from utils import clean_text, plot_confusion_matrix, plot_roc, save_metrics
+from utils import (
+    clean_text,
+    encode_lstm_text,
+    label_ids,
+    plot_confusion_matrix,
+    plot_roc,
+    save_metrics,
+)
+
+
+def test_label_ids_maps_known_labels():
+    assert label_ids(["negative", "positive", "neutral"]) == [0, 2, 1]
+
+
+def test_label_ids_raises_with_bad_values_named():
+    with pytest.raises(ValueError, match="typo"):
+        label_ids(["positive", "typo"])
+
+
+def test_encode_lstm_text_pads_and_maps_unk():
+    vocab = {"<pad>": 0, "<unk>": 1, "good": 2}
+    ids = encode_lstm_text(vocab, "good unseenword", max_len=4)
+    assert ids == [2, 1, 0, 0]
+
+
+def test_encode_lstm_text_truncates():
+    vocab = {"<pad>": 0, "<unk>": 1, "a": 2, "b": 3, "c": 4}
+    ids = encode_lstm_text(vocab, "a b c", max_len=2)
+    assert ids == [2, 3]
 
 
 def test_clean_text_lowercases_and_strips_urls_mentions_hashtags():
