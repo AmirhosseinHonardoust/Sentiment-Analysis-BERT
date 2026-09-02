@@ -1,5 +1,5 @@
 # Sentiment Analysis with BERT
- 
+
 ![CI](https://github.com/AmirhosseinHonardoust/Sentiment-Analysis-BERT/actions/workflows/ci.yml/badge.svg)
 
 A deep learning project for **sentiment classification of tweets** using **BERT (Bidirectional Encoder Representations from Transformers)**, with a lightweight **BiLSTM baseline** for comparison. The project includes data preprocessing, vocabulary/tokenizer setup, model training, evaluation, and visualization of results such as confusion matrix, ROC curves, and word clouds.
@@ -22,8 +22,9 @@ A deep learning project for **sentiment classification of tweets** using **BERT 
 ## Project Structure
 ```
 sentiment-analysis-bert/
-├─ .github/workflows/
-│  └─ ci.yml
+├─ .github/
+│  ├─ workflows/ci.yml
+│  └─ dependabot.yml
 ├─ data/
 │  ├─ train.csv
 │  ├─ val.csv
@@ -45,9 +46,11 @@ sentiment-analysis-bert/
 │  ├─ predict.py          # single-text inference, either model
 │  └─ utils.py
 ├─ tests/
+│  └─ conftest.py         # includes the offline tiny_bert_dir fixture
 ├─ pyproject.toml
 ├─ requirements.txt
 ├─ requirements-dev.txt
+├─ CONTRIBUTING.md
 └─ README.md
 ```
 ---
@@ -103,7 +106,7 @@ black --check --line-length 100 src/ tests/
 mypy --ignore-missing-imports src/
 pytest
 ```
-These four commands are exactly what CI runs on every push/PR. The pytest suite covers preprocessing, the LSTM training/eval pipeline, and utility functions without any network access; the BERT training/eval path requires downloading `bert-base-uncased` from the Hugging Face Hub and is exercised manually / in your own environment rather than in CI.
+These four commands are exactly what CI runs on every push/PR. The pytest suite covers preprocessing, the LSTM training/eval pipeline, utility functions, and the full BERT train/evaluate/predict pipeline — all without any network access, since the BERT tests run against a tiny, randomly-initialized local checkpoint (see `tests/conftest.py`'s `tiny_bert_dir` fixture) rather than a real download. See `CONTRIBUTING.md` for details. A real fine-tuning run against `bert-base-uncased` still needs a live Hugging Face Hub download and is exercised manually rather than in CI.
 ---
 
 ## Results
@@ -126,22 +129,21 @@ These four commands are exactly what CI runs on every push/PR. The pytest suite 
 ---
 
 ## Requirements
-- Python 3.8+  
-- PyTorch  
-- Transformers (HuggingFace)  
-- Scikit-learn, Pandas, Matplotlib, Seaborn  
-- WordCloud  
+- Python 3.11+
+- PyTorch
+- Transformers (HuggingFace)
+- Scikit-learn, Pandas, Matplotlib, Seaborn
+- WordCloud
 
 ---
 
 ## Known limitations
 - `data/tweets_sample.csv` is a 15-row illustrative sample; don't read anything into the demo metrics/plots in `outputs/` beyond "the pipeline runs end-to-end."
-- Pinned dependency versions (`requirements.txt`) are from mid-2024; a version bump (torch, transformers) hasn't been done yet since it needs re-verifying the BERT path against a real Hugging Face Hub download, which isn't exercised in CI.
-- BERT training/eval requires downloading `bert-base-uncased` from the Hugging Face Hub and is not covered by CI or automated tests — only exercised manually.
+- BERT's *code path* (training loop, evaluation, inference) is tested in CI against a tiny local checkpoint, but a real fine-tuning run against `bert-base-uncased` requires a live Hugging Face Hub download and is only exercised manually.
+- Pinned dependencies are refreshed periodically via Dependabot (`.github/dependabot.yml`); each bump PR should pass the full gate (including the BERT tests) before merging.
 
 ## Next Steps
-- Expand dataset for more robust evaluation.  
-- Try advanced transformer models (RoBERTa, DistilBERT).  
-- Apply hyperparameter tuning and cross-validation.  
-- Deploy model with FastAPI or Streamlit for interactive demo.  
-- Bump pinned dependencies (torch, transformers) and re-verify the BERT path.
+- Expand dataset for more robust evaluation.
+- Try advanced transformer models (RoBERTa, DistilBERT).
+- Apply hyperparameter tuning and cross-validation.
+- Deploy model with FastAPI or Streamlit for interactive demo.

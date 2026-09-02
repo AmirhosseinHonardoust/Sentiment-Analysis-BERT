@@ -8,7 +8,6 @@ base model from the Hugging Face Hub on first run.
 
 import argparse
 import os
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -73,7 +72,7 @@ def main() -> None:
     total_steps = len(train_loader) * args.epochs
     sched = get_linear_schedule_with_warmup(opt, num_warmup_steps=0, num_training_steps=total_steps)
 
-    history: Dict[str, List[float]] = {"train_loss": [], "val_loss": []}
+    history: dict[str, list[float]] = {"train_loss": [], "val_loss": []}
     best = float("inf")
     # Namespaced so it never collides with train_lstm.py's checkpoint in the
     # same --outdir (both used to write "best_model.pt").

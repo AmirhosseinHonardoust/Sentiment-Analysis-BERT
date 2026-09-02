@@ -6,7 +6,7 @@ module stays importable without pulling in transformers for callers that
 don't need it.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 import pandas as pd
 import torch
@@ -27,7 +27,7 @@ class BertTweetDataset(Dataset):
     def __len__(self) -> int:
         return len(self.texts)
 
-    def __getitem__(self, i: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, i: int) -> dict[str, torch.Tensor]:
         enc = self.tok(
             self.texts[i],
             truncation=True,

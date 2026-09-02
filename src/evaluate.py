@@ -9,7 +9,6 @@ to --outdir.
 
 import argparse
 import os
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -59,13 +58,13 @@ def _run_wordclouds(df: pd.DataFrame, y_pred: np.ndarray, outdir: str) -> None:
 
 
 def _score_and_report(
-    y_true: List[int], y_prob: np.ndarray, df: pd.DataFrame, outdir: str, wordclouds: bool
+    y_true: list[int], y_prob: np.ndarray, df: pd.DataFrame, outdir: str, wordclouds: bool
 ) -> None:
     """Shared scoring/plotting path used by both the BERT and LSTM evaluators."""
     y_pred = y_prob.argmax(axis=1)
 
     # Dynamically adapt to classes present in y_true, rather than assuming all 3.
-    labels_present: List[int] = sorted(np.unique(y_true).tolist())
+    labels_present: list[int] = sorted(np.unique(y_true).tolist())
     target_names = [ID2LABEL.get(i, str(i)) for i in labels_present]
 
     report = classification_report(
@@ -111,7 +110,7 @@ def evaluate_bert(
     ds = BertTweetDataset(df, tok, max_len=max_len)
     dl = DataLoader(ds, batch_size=32, shuffle=False)
 
-    y_true: List[int] = []
+    y_true: list[int] = []
     y_prob_parts = []
     model.eval()
     with torch.no_grad():
@@ -158,7 +157,7 @@ def is_lstm_checkpoint(path: str) -> bool:
 class LSTMEvalDS(Dataset):
     """Mirrors train_lstm.py's TextDS encoding (via utils.encode_lstm_text), fixed vocab."""
 
-    def __init__(self, df: pd.DataFrame, vocab: Dict[str, int], max_len: int) -> None:
+    def __init__(self, df: pd.DataFrame, vocab: dict[str, int], max_len: int) -> None:
         self.texts = df["text"].astype(str).tolist()
         self.labels = label_ids(df["label"].tolist())
         self.vocab = vocab
@@ -197,7 +196,7 @@ def evaluate_lstm(test_csv: str, ckpt_path: str, outdir: str, wordclouds: bool =
     ds = LSTMEvalDS(df, vocab, max_len)
     dl = DataLoader(ds, batch_size=32, shuffle=False)
 
-    y_true: List[int] = []
+    y_true: list[int] = []
     y_prob_parts = []
     with torch.no_grad():
         for xb, yb in dl:

@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from typing import Dict, Iterable, List
+from collections.abc import Iterable
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +13,7 @@ LABEL2ID = {"negative": 0, "neutral": 1, "positive": 2}
 ID2LABEL = {v: k for k, v in LABEL2ID.items()}
 
 
-def label_ids(labels: Iterable[str]) -> List[int]:
+def label_ids(labels: Iterable[str]) -> list[int]:
     """Map raw label strings to `LABEL2ID` ids.
 
     Used everywhere a CSV's `label` column is consumed (train_bert.py,
@@ -27,7 +27,7 @@ def label_ids(labels: Iterable[str]) -> List[int]:
     return [LABEL2ID[label] for label in labels]
 
 
-def encode_lstm_text(vocab: Dict[str, int], text: str, max_len: int) -> List[int]:
+def encode_lstm_text(vocab: dict[str, int], text: str, max_len: int) -> list[int]:
     """Encode `text` into fixed-length token ids using `vocab`.
 
     Unseen words map to `vocab["<unk>"]`; the sequence is truncated or padded
