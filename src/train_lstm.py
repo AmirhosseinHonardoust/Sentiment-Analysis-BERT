@@ -9,7 +9,6 @@ import argparse
 import os
 import random
 from collections import Counter
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -104,7 +103,7 @@ def main():
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
     crit = nn.CrossEntropyLoss()
 
-    history: Dict[str, List[float]] = {"train_loss": [], "val_loss": []}
+    history: dict[str, list[float]] = {"train_loss": [], "val_loss": []}
     best_val = 1e9
     # Namespaced so it never collides with train_bert.py's checkpoint in the
     # same --outdir (both used to write "best_model.pt").

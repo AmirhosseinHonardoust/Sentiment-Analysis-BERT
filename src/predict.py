@@ -5,7 +5,6 @@ predicted label and per-class probabilities for each input text.
 """
 
 import argparse
-from typing import List, Tuple
 
 import torch
 
@@ -14,8 +13,8 @@ from utils import ID2LABEL, encode_lstm_text
 
 
 def predict_bert(
-    texts: List[str], ckpt_dir: str, max_len: int = 128
-) -> List[Tuple[str, List[float]]]:
+    texts: list[str], ckpt_dir: str, max_len: int = 128
+) -> list[tuple[str, list[float]]]:
     """Classify `texts` with an HF-format BERT checkpoint directory."""
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
@@ -37,7 +36,7 @@ def predict_bert(
     return results
 
 
-def predict_lstm(texts: List[str], ckpt_path: str) -> List[Tuple[str, List[float]]]:
+def predict_lstm(texts: list[str], ckpt_path: str) -> list[tuple[str, list[float]]]:
     """Classify `texts` with an LSTM checkpoint (file or its containing directory)."""
     from train_lstm import LSTMClassifier
 
