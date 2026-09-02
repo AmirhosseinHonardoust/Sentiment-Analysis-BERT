@@ -1,11 +1,15 @@
-import argparse, os
+import argparse
+import os
+from collections import Counter
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from collections import Counter
+
 
 def can_stratify(labels, min_per_class=2):
     counts = Counter(labels)
     return all(c >= min_per_class for c in counts.values()) and len(counts) > 1
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -37,9 +41,7 @@ def main():
         )
     else:
         # Fallback without stratify for tiny/imbalanced data
-        train_df, temp = train_test_split(
-            df, test_size=total_split, random_state=args.seed
-        )
+        train_df, temp = train_test_split(df, test_size=total_split, random_state=args.seed)
 
     # Second split: val vs test from temp
     rel_test = args.test_size / total_split
@@ -49,20 +51,22 @@ def main():
             temp, test_size=rel_test, stratify=temp["label"], random_state=args.seed
         )
     else:
-        val_df, test_df = train_test_split(
-            temp, test_size=rel_test, random_state=args.seed
-        )
+        val_df, test_df = train_test_split(temp, test_size=rel_test, random_state=args.seed)
 
     # Safety: ensure each split has at least one sample of each class, otherwise warn
     for name, part in [("train", train_df), ("val", val_df), ("test", test_df)]:
         counts = Counter(part["label"])
         if any(c == 0 for c in counts.values()) or len(counts) < len(Counter(df["label"])):
-            print(f"[WARN] '{name}' split may be missing some classes. Consider adding more data or reducing --val-size/--test-size.")
+            print(
+                f"[WARN] '{name}' split may be missing some classes. "
+                "Consider adding more data or reducing --val-size/--test-size."
+            )
 
     train_df.to_csv(os.path.join(args.outdir, "train.csv"), index=False)
     val_df.to_csv(os.path.join(args.outdir, "val.csv"), index=False)
     test_df.to_csv(os.path.join(args.outdir, "test.csv"), index=False)
     print("[OK] Wrote train/val/test CSVs to", args.outdir)
+
 
 if __name__ == "__main__":
     main()

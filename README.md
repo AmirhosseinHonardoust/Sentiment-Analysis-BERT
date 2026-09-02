@@ -1,28 +1,36 @@
 # Sentiment Analysis with BERT
 
-A deep learning project for **sentiment classification of tweets** using **BERT (Bidirectional Encoder Representations from Transformers)**. The project includes data preprocessing, vocabulary/tokenizer setup, model training, evaluation, and visualization of results such as confusion matrix, ROC curves, and word clouds.  
+![CI](https://github.com/AmirhosseinHonardoust/Sentiment-Analysis-BERT/actions/workflows/ci.yml/badge.svg)
+
+A deep learning project for **sentiment classification of tweets** using **BERT (Bidirectional Encoder Representations from Transformers)**, with a lightweight **BiLSTM baseline** for comparison. The project includes data preprocessing, vocabulary/tokenizer setup, model training, evaluation, and visualization of results such as confusion matrix, ROC curves, and word clouds.
+
+> **Note on data:** `data/tweets_sample.csv` is a ~15-row illustrative sample, not a real training set — it's enough to exercise the full pipeline end-to-end, but the metrics/plots checked into `outputs/` are demo artifacts, not a benchmark of real model quality. Swap in a real labeled dataset (same `text,label` schema) for meaningful results.
 
 ---
 
 ## Features
 - Preprocess tweets with cleaning, tokenization, and splitting into train/val/test sets.  
-- Fine-tune `bert-base-uncased` on sentiment labels (`negative`, `neutral`, `positive`).  
+- Fine-tune `bert-base-uncased` **or** train a BiLSTM baseline on sentiment labels (`negative`, `neutral`, `positive`).  
 - Track and visualize **training & validation loss**.  
-- Generate **classification reports, confusion matrices, ROC curves**.  
+- Generate **classification reports, confusion matrices, ROC curves** for either model via the same `evaluate.py` entry point.
 - Create **word clouds** for positive and negative predictions.  
-- Modular codebase with reproducible pipelines for preprocessing, training, and evaluation.  
+- Modular codebase with reproducible pipelines for preprocessing, training, and evaluation.
+- Lint/format/type-check gate (ruff, black, mypy) and a pytest suite, enforced in CI.
 
 ---
 
 ## Project Structure
 ```
 sentiment-analysis-bert/
+├─ .github/workflows/
+│  └─ ci.yml
 ├─ data/
 │  ├─ train.csv
 │  ├─ val.csv
 │  └─ test.csv
 ├─ outputs/
-│  ├─ best_model.pt
+│  ├─ best_model_bert.pt      # written by train_bert.py
+│  ├─ best_model_lstm.pt      # written by train_lstm.py (separate outdir recommended)
 │  ├─ confusion_matrix.png
 │  ├─ training_curves.png
 │  ├─ classification_report.txt
@@ -34,6 +42,10 @@ sentiment-analysis-bert/
 │  ├─ train_bert.py
 │  ├─ evaluate.py
 │  └─ utils.py
+├─ tests/
+├─ pyproject.toml
+├─ requirements.txt
+├─ requirements-dev.txt
 └─ README.md
 ```
 ---
@@ -46,6 +58,9 @@ source .venv/bin/activate    # Linux/Mac
 .venv\Scripts\activate       # Windows
 
 pip install -r requirements.txt
+
+# For contributing (lint/format/type-check tools + pytest):
+pip install -r requirements-dev.txt
 ```
 
 ## Preprocess Data
@@ -55,13 +70,32 @@ python src/preprocess.py --input data/tweets_sample.csv --outdir data --val-size
 
 ## Train BERT
 ```bash
-python src/train_bert.py --train data/train.csv --val data/val.csv  --outdir outputs --epochs 3 --batch-size 16 --lr 2e-5  --model bert-base-uncased --max-len 128
+python src/train_bert.py --train data/train.csv --val data/val.csv --outdir outputs/bert --epochs 3 --batch-size 16 --lr 2e-5 --model bert-base-uncased --max-len 128
+```
+
+## Train LSTM (lightweight baseline, no pretrained weights needed)
+```bash
+python src/train_lstm.py --train data/train.csv --val data/val.csv --outdir outputs/lstm --epochs 8 --batch-size 64 --lr 1e-3
 ```
 
 ## Evaluate
+Works for either model — `evaluate.py` auto-detects the checkpoint type from `--checkpoint`.
 ```bash
-python src/evaluate.py --test data/test.csv --checkpoint outputs  --outdir outputs --wordclouds
+# BERT: point at the HF-format output directory (contains config.json)
+python src/evaluate.py --test data/test.csv --checkpoint outputs/bert --outdir outputs/bert --wordclouds
+
+# LSTM: point at the checkpoint file, or its containing directory
+python src/evaluate.py --test data/test.csv --checkpoint outputs/lstm --outdir outputs/lstm --wordclouds
 ```
+
+## Development
+```bash
+ruff check --select E,F,I,B,SIM,UP --line-length 100 src/ tests/
+black --check --line-length 100 src/ tests/
+mypy --ignore-missing-imports src/
+pytest
+```
+These four commands are exactly what CI runs on every push/PR. The pytest suite covers preprocessing, the LSTM training/eval pipeline, and utility functions without any network access; the BERT training/eval path requires downloading `bert-base-uncased` from the Hugging Face Hub and is exercised manually / in your own environment rather than in CI.
 ---
 
 ## Results

@@ -1,31 +1,43 @@
-import argparse, os, json, numpy as np, pandas as pd, torch
-from torch.utils.data import Dataset, DataLoader
-from torch.optim import AdamW
-from sklearn.metrics import classification_report
-from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, get_linear_schedule_with_warmup
+import argparse
+import os
 
-from utils import LABEL2ID, ID2LABEL, plot_training_curves
+import numpy as np
+import pandas as pd
+import torch
+from torch.optim import AdamW
+from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
+from transformers import (
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+    get_linear_schedule_with_warmup,
+)
+
+from utils import ID2LABEL, LABEL2ID, plot_training_curves
+
 
 class TweetDS(Dataset):
     def __init__(self, df, tokenizer, max_len=128):
         self.texts = df["text"].astype(str).tolist()
-        self.labels = [LABEL2ID[l] for l in df["label"].tolist()]
+        self.labels = [LABEL2ID[label] for label in df["label"].tolist()]
         self.tok = tokenizer
         self.max_len = max_len
-    def __len__(self): 
+
+    def __len__(self):
         return len(self.texts)
+
     def __getitem__(self, i):
         enc = self.tok(
             self.texts[i],
             truncation=True,
             padding="max_length",
             max_length=self.max_len,
-            return_tensors="pt"
+            return_tensors="pt",
         )
         item = {k: v.squeeze(0) for k, v in enc.items()}
         item["labels"] = torch.tensor(self.labels[i], dtype=torch.long)
         return item
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -41,15 +53,13 @@ def main():
     args = ap.parse_args()
 
     os.makedirs(args.outdir, exist_ok=True)
-    torch.manual_seed(args.seed); np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
 
     # Tokenizer & model
     tok = AutoTokenizer.from_pretrained(args.model)
     model = AutoModelForSequenceClassification.from_pretrained(
-        args.model, 
-        num_labels=3, 
-        id2label=ID2LABEL, 
-        label2id=LABEL2ID
+        args.model, num_labels=3, id2label=ID2LABEL, label2id=LABEL2ID
     )
 
     # Data
@@ -69,12 +79,15 @@ def main():
 
     history = {"train_loss": [], "val_loss": []}
     best = float("inf")
-    best_path = os.path.join(args.outdir, "best_model.pt")
+    # Namespaced so it never collides with train_lstm.py's checkpoint in the
+    # same --outdir (both used to write "best_model.pt").
+    best_path = os.path.join(args.outdir, "best_model_bert.pt")
 
     for ep in range(1, args.epochs + 1):
         # ---- Train ----
         model.train()
-        tl = 0.0; n = 0
+        tl = 0.0
+        n = 0
         for batch in tqdm(train_loader, desc=f"Epoch {ep}/{args.epochs} [train]"):
             batch = {k: v.to(device) for k, v in batch.items()}
             opt.zero_grad()
@@ -85,21 +98,25 @@ def main():
             opt.step()
             sched.step()
             bs = batch["input_ids"].size(0)
-            tl += loss.item() * bs; n += bs
+            tl += loss.item() * bs
+            n += bs
         tr_loss = tl / max(n, 1)
 
         # ---- Validate ----
         model.eval()
-        vl = 0.0; vn = 0
+        vl = 0.0
+        vn = 0
         with torch.no_grad():
             for batch in tqdm(val_loader, desc=f"Epoch {ep}/{args.epochs} [val]"):
                 batch = {k: v.to(device) for k, v in batch.items()}
                 out = model(**batch)
                 loss = out.loss
                 bs = batch["input_ids"].size(0)
-                vl += loss.item() * bs; vn += bs
+                vl += loss.item() * bs
+                vn += bs
         val_loss = vl / max(vn, 1)
-        history["train_loss"].append(tr_loss); history["val_loss"].append(val_loss)
+        history["train_loss"].append(tr_loss)
+        history["val_loss"].append(val_loss)
         print(f"[epoch {ep}] train_loss={tr_loss:.4f} val_loss={val_loss:.4f}")
 
         # ---- Save best ----
@@ -114,6 +131,7 @@ def main():
         plot_training_curves(history, os.path.join(args.outdir, "training_curves.png"))
 
     print("[OK] BERT training complete. Best saved to", best_path)
+
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,22 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+
+# Generated run artifacts (outputs/ in the repo is a checked-in sample run;
+# new local runs should not be committed unless intentional)
+outputs/**/*.pt
+outputs/**/*.bin
+outputs/**/*.safetensors
