@@ -1,6 +1,15 @@
+"""Train a lightweight BiLSTM sentiment classifier (no pretrained weights needed).
+
+A from-scratch word vocabulary is built from the training split and reused
+for validation/evaluation. Writes best_model_lstm.pt (state_dict + vocab +
+architecture args) and training_curves.png to --outdir.
+"""
+
 import argparse
 import os
 import random
+from collections import Counter
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -9,18 +18,18 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from utils import LABEL2ID, plot_training_curves
+from utils import encode_lstm_text, label_ids, plot_training_curves
 
 
 class TextDS(Dataset):
+    """Builds (or reuses) a word vocab and encodes texts to fixed-length id sequences."""
+
     def __init__(self, df, vocab=None, max_len=64, build=False, min_freq=1):
         self.texts = df["text"].tolist()
-        self.labels = [LABEL2ID[label] for label in df["label"].tolist()]
+        self.labels = label_ids(df["label"].tolist())
         self.max_len = max_len
         if build or vocab is None:
             self.vocab = {"<pad>": 0, "<unk>": 1}
-            from collections import Counter
-
             cnt = Counter()
             for t in self.texts:
                 cnt.update(t.split())
@@ -31,10 +40,7 @@ class TextDS(Dataset):
             self.vocab = vocab
 
     def encode(self, s):
-        ids = [self.vocab.get(w, 1) for w in s.split()][: self.max_len]
-        if len(ids) < self.max_len:
-            ids += [0] * (self.max_len - len(ids))
-        return ids
+        return encode_lstm_text(self.vocab, s, self.max_len)
 
     def __len__(self):
         return len(self.texts)
@@ -46,6 +52,8 @@ class TextDS(Dataset):
 
 
 class LSTMClassifier(nn.Module):
+    """BiLSTM over mean-pooled token embeddings, followed by a linear classifier head."""
+
     def __init__(self, vocab_size, embed_dim=100, hidden_dim=128, num_classes=3):
         super().__init__()
         self.emb = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
@@ -61,17 +69,21 @@ class LSTMClassifier(nn.Module):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--train", required=True)
-    ap.add_argument("--val", required=True)
-    ap.add_argument("--outdir", default="outputs")
-    ap.add_argument("--epochs", type=int, default=8)
-    ap.add_argument("--batch-size", type=int, default=64)
-    ap.add_argument("--lr", type=float, default=1e-3)
-    ap.add_argument("--embed-dim", type=int, default=100)
-    ap.add_argument("--hidden-dim", type=int, default=128)
-    ap.add_argument("--max-len", type=int, default=64)
-    ap.add_argument("--seed", type=int, default=42)
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--train", required=True, help="Path to training CSV (text,label columns).")
+    ap.add_argument("--val", required=True, help="Path to validation CSV (text,label columns).")
+    ap.add_argument(
+        "--outdir", default="outputs", help="Directory to write the checkpoint and curves to."
+    )
+    ap.add_argument("--epochs", type=int, default=8, help="Number of training epochs.")
+    ap.add_argument("--batch-size", type=int, default=64, help="Training/validation batch size.")
+    ap.add_argument("--lr", type=float, default=1e-3, help="Adam learning rate.")
+    ap.add_argument("--embed-dim", type=int, default=100, help="Word embedding dimension.")
+    ap.add_argument("--hidden-dim", type=int, default=128, help="LSTM hidden state dimension.")
+    ap.add_argument(
+        "--max-len", type=int, default=64, help="Max token sequence length (truncate/pad to)."
+    )
+    ap.add_argument("--seed", type=int, default=42, help="Random seed for torch/numpy/random.")
     args = ap.parse_args()
 
     os.makedirs(args.outdir, exist_ok=True)
@@ -92,7 +104,7 @@ def main():
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
     crit = nn.CrossEntropyLoss()
 
-    history = {"train_loss": [], "val_loss": []}
+    history: Dict[str, List[float]] = {"train_loss": [], "val_loss": []}
     best_val = 1e9
     # Namespaced so it never collides with train_bert.py's checkpoint in the
     # same --outdir (both used to write "best_model.pt").

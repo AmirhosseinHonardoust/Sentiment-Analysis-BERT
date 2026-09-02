@@ -1,3 +1,9 @@
+"""Split a raw text,label CSV into train/val/test CSVs, stratifying by label when possible.
+
+Falls back to an unstratified split for small/imbalanced inputs where every
+class doesn't have enough rows to stratify (see can_stratify).
+"""
+
 import argparse
 import os
 from collections import Counter
@@ -7,17 +13,22 @@ from sklearn.model_selection import train_test_split
 
 
 def can_stratify(labels, min_per_class=2):
+    """True if every class in `labels` has at least `min_per_class` rows and there's >1 class."""
     counts = Counter(labels)
     return all(c >= min_per_class for c in counts.values()) and len(counts) > 1
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--input", required=True)
-    ap.add_argument("--outdir", default="data")
-    ap.add_argument("--val-size", type=float, default=0.15)
-    ap.add_argument("--test-size", type=float, default=0.15)
-    ap.add_argument("--seed", type=int, default=42)
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--input", required=True, help="Path to the raw input CSV (text,label).")
+    ap.add_argument("--outdir", default="data", help="Directory to write train/val/test CSVs to.")
+    ap.add_argument(
+        "--val-size", type=float, default=0.15, help="Fraction of rows to hold out for val."
+    )
+    ap.add_argument(
+        "--test-size", type=float, default=0.15, help="Fraction of rows to hold out for test."
+    )
+    ap.add_argument("--seed", type=int, default=42, help="Random seed for the splits.")
     args = ap.parse_args()
 
     os.makedirs(args.outdir, exist_ok=True)

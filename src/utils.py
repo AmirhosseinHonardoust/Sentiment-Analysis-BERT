@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from typing import Dict, Iterable, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,6 +11,33 @@ from sklearn.metrics import auc, confusion_matrix, roc_curve
 
 LABEL2ID = {"negative": 0, "neutral": 1, "positive": 2}
 ID2LABEL = {v: k for k, v in LABEL2ID.items()}
+
+
+def label_ids(labels: Iterable[str]) -> List[int]:
+    """Map raw label strings to `LABEL2ID` ids.
+
+    Used everywhere a CSV's `label` column is consumed (train_bert.py,
+    train_lstm.py, evaluate.py) instead of indexing `LABEL2ID` directly, so an
+    unexpected class (typo, stray value) fails with an actionable message
+    naming the bad value(s) instead of a bare `KeyError`.
+    """
+    bad = sorted({label for label in labels if label not in LABEL2ID})
+    if bad:
+        raise ValueError(f"Unknown label(s) {bad!r} in data; expected one of {sorted(LABEL2ID)!r}.")
+    return [LABEL2ID[label] for label in labels]
+
+
+def encode_lstm_text(vocab: Dict[str, int], text: str, max_len: int) -> List[int]:
+    """Encode `text` into fixed-length token ids using `vocab`.
+
+    Unseen words map to `vocab["<unk>"]`; the sequence is truncated or padded
+    with `vocab["<pad>"]` to exactly `max_len`. Shared by train_lstm.TextDS
+    and evaluate.LSTMEvalDS so their encoding can't drift apart.
+    """
+    ids = [vocab.get(w, vocab["<unk>"]) for w in text.split()][:max_len]
+    if len(ids) < max_len:
+        ids += [vocab["<pad>"]] * (max_len - len(ids))
+    return ids
 
 
 def clean_text(s: str) -> str:
