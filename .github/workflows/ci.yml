@@ -5,10 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -33,3 +35,4 @@ jobs:
       - name: Pytest
         # BERT tests are skipped automatically when transformers/torch weight
         # downloads aren't available; see tests/conftest.py.
+        run: pytest
