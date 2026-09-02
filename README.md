@@ -1,5 +1,5 @@
 # Sentiment Analysis with BERT
-
+ 
 ![CI](https://github.com/AmirhosseinHonardoust/Sentiment-Analysis-BERT/actions/workflows/ci.yml/badge.svg)
 
 A deep learning project for **sentiment classification of tweets** using **BERT (Bidirectional Encoder Representations from Transformers)**, with a lightweight **BiLSTM baseline** for comparison. The project includes data preprocessing, vocabulary/tokenizer setup, model training, evaluation, and visualization of results such as confusion matrix, ROC curves, and word clouds.
