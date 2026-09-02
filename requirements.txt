@@ -6,4 +6,4 @@ seaborn==0.13.2
 tqdm==4.70.0
 wordcloud==1.9.6
 torch==2.13.0
-transformers==4.57.6
+transformers==5.16.1
