@@ -7,7 +7,7 @@
 ![HuggingFace](https://img.shields.io/badge/HuggingFace-Transformers-yellow)
 ![Status](https://img.shields.io/badge/Status-Portfolio%20ML%20Project-purple)
 [![CI](https://github.com/AmirhosseinHonardoust/Sentiment-Analysis-BERT/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AmirhosseinHonardoust/Sentiment-Analysis-BERT/actions/workflows/ci.yml)
-
+ 
 </div>
   
 A deep learning project for **sentiment classification of tweets**, built around fine-tuning **BERT (`bert-base-uncased`)** with a lightweight **BiLSTM baseline** for comparison, plus reproducible **preprocessing**, **evaluation reporting**, and **single-text inference**.
