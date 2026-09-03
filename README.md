@@ -9,7 +9,7 @@
 [![CI](https://github.com/AmirhosseinHonardoust/Sentiment-Analysis-BERT/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AmirhosseinHonardoust/Sentiment-Analysis-BERT/actions/workflows/ci.yml)
 
 </div>
-
+  
 A deep learning project for **sentiment classification of tweets**, built around fine-tuning **BERT (`bert-base-uncased`)** with a lightweight **BiLSTM baseline** for comparison, plus reproducible **preprocessing**, **evaluation reporting**, and **single-text inference**.
 
 > **Note on data:** `data/tweets_sample.csv` is a ~15-row illustrative sample, not a real training set. It is enough to exercise the full pipeline end-to-end, but the metrics and plots checked into `outputs/` are demo artifacts, not a benchmark of real model quality. Swap in a real labeled dataset (same `text,label` schema) for meaningful results.
